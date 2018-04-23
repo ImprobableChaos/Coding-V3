@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+
+{% block body%}
+    <div class="text-center">
+        <h1>Quizzes</h1>
+        <p class="lead">List of the quizzes</p>
+    </div>
+    <ul class="list-group">
+    {% for quiz in quizzes %} <!-- This second teacherposts is coming from the route where teacherposts = Teacherposts -->
+        <li class = "list-group-item"><a href="Quizzes/{{quiz.quizid}}" target="_blank">{{quiz.Topic}}</a></li>
+    {% endfor %}
+    </ul>
+{% endblock %}

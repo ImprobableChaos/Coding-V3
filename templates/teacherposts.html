@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+
+{% block body%}
+    <div class="text-center">
+        <h1> Teacher Posts</h1>
+        <p class="lead">Here Teachers can post advice to students to improve or general notes or even remainders about homework!</p>
+    </div>
+    <ul class="list-group">
+    {% for teacherpost in teacherposts %} <!-- This second teacherposts is coming from the route where teacherposts = Teacherposts -->
+        <li class = "list-group-item"><a href="teacherpost/{{teacherpost.id}}">{{teacherpost.title}}</a></li>
+    {% endfor %}
+    </ul>
+{% endblock %}
