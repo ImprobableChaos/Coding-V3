@@ -5,7 +5,16 @@ from passlib.hash import sha256_crypt
 
 class Database():
 
-    #def add_question(self):
+    def add_question(self,question, answer, topic):
+
+        conn = sqlite3.connect("projectdatabase.db", check_same_thread=False)
+        cursor = conn.cursor()
+
+        cursor.execute("""INSERT INTO questions(qid, question, answer, topic) VALUES (NULL,?,?,?)""",(question, answer, topic,))
+
+        conn.commit()
+
+        conn.close()
 
     def add_student(self,firstname, surname, email, password):
 
@@ -38,7 +47,7 @@ class Database():
 
     def check_for_student(self,email):
 
-        conn = connect_database()
+        conn = sqlite3.connect("projectdatabase.db",check_same_thread=False)
         cursor = conn.cursor()
 
         cursor.execute("""SELECT * from users WHERE email = ?""",(email,))
@@ -47,14 +56,14 @@ class Database():
 
         conn.close()
 
-        if data == None:
+        if data is None:
             return False
         else:
             return True
 
 
 
-    def login(self, email, password_candidate):
+    def get_login(self, email, password_candidate):
 
         conn = sqlite3.connect("projectdatabase.db", check_same_thread=False)
         cursor = conn.cursor()
@@ -64,22 +73,7 @@ class Database():
 
         conn.close()
 
-        if data != None:
-
-            password = data[4]
-
-            if sha256_crypt.verify(password_candidate, password):
-                flash("You are now logged in.")
-                session["logged_in"] = True
-                session["ID"] = self.get_id(email)
-                redirect(url_for("home"))
-            else:
-                flash("Invalid login")
-                return render_template("login.html")
-
-        else:
-            flash("Email not found")
-            return render_template("login.html")
+        return data
 
     def get_id(self,email):
 
@@ -119,3 +113,18 @@ class Database():
         conn.close()
 
         return role
+
+    def check_for_topic(self,topic):
+
+        conn = sqlite3.connect("projectdatabase.db", check_same_thread=False)
+        cursor = conn.cursor()
+
+        cursor.execute("""SELECT * from questions WHERE topic = ?""", (topic,))
+        result = cursor.fetchone()
+
+        conn.close()
+
+        if result is not None:
+            return True
+        else:
+            return False

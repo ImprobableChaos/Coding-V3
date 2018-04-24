@@ -4,6 +4,7 @@
 
 
 #Importing the extensions for the project
+
 from flask import Flask, render_template, flash, redirect, url_for, session, logging, request, Response
 from data import teacherPosts, quizzes
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators
@@ -12,14 +13,22 @@ import sqlite3
 from functools import wraps
 
 #Importing the other .py files
+
 from database import *
 from data import *
 
 app =  Flask(__name__) #creating instance of flask class
 
+#Creating database tables
+
 #Config sqlite
-#conn = sqlite3.connect("projectdatabase.db",check_same_thread=False)
-#cursor = conn.cursor()
+conn = sqlite3.connect("projectdatabase.db",check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("DROP TABLE IF EXISTS questions")
+cursor.execute("""CREATE TABLE questions(id INTEGER PRIMARY KEY AUTOINCREMENT, question text, answer text, topic text)""")
+conn.commit()
+conn.close()
 
 #cursor.execute("DROP TABLE IF EXISTS users")
 #cursor.execute("""CREATE TABLE users(id INTEGER PRIMARY KEY AUTOINCREMENT,firstname text,surname text,email text, password text,role text) """)
@@ -27,34 +36,27 @@ app =  Flask(__name__) #creating instance of flask class
 #conn.close()
 
 
-
+#Calling the classes/functions from other .py files
 Teacherposts = teacherPosts()
 q = quizzes()
 d = Database()
 
-@app.context_processor
-def inject_database():
-    return {"d":d}
+#@app.context_processor
+#def inject_database():
+    #return {"d":d}
 
-@app.before_request
-def connect_database():
-    g.db = sqlite3.connect("projectdatabase.db",check_same_thread=False)
+#@app.before_request
+#def connect_database():
+    #g.db = sqlite3.connect("projectdatabase.db", check_same_thread=False)
 
-@app.teardown_appcontext
-def close_database():
-    try:
-        g.db.close()
-    except Exception:
-        pass
+#@app.teardown_appcontext
+#def close_database():
+    #try:
+        #g.db.close()
+    #except Exception:
+        #pass
 
-def check_for_topic(topic):
-    connect_database()
-    cursor = g.db.cursor()
-    cursor.execute("""SELECT * from questions WHERE topic = ?""", (topic,))
-    result = cursor.fetchone()
 
-    conn.close()
-    #if result
 
 def requires_roles(*roles):
     def wrapper(f):
@@ -71,32 +73,29 @@ def requires_roles(*roles):
 def home():
     return render_template("home.html")
 
-#class QuestionsForms(Form):
-    #Question = StringField("Question", [validators.Length(min=1)])
-    #Answer = StringField("Answer", [validators.Length(min=1)])
-    #Topic = StringField("Topic", [validators.Length(min=1)])
-    #Choices = StringField("Multiple Choice Answers, Enclose with [] and separate the choices with commas (a,b)")
+class QuestionsForms(Form):
+    Question = StringField("Question", [validators.Length(min=1)], message="This field is required")
+    Answer = StringField("Answer", [validators.Length(min=1)], message="This field is required")
+    Topic = StringField("Topic", [validators.Length(min=1)], message="This field is required")
+    Choices = StringField("Multiple Choice Answers, Enclose with [] and separate the choices with commas (a,b)")
 
-@app.route("/makequiz")#,methods="GET","POST")
+@app.route("/makequestions", methods=["GET", "POST"])
 @requires_roles("admin")
 def makequestions():
-    #form = RegisterForm(request.form)
-    #if request.method == "POST" and form.validate():
-        #question = form.Question.data
-        #answer = form.Answer.data
-        #topic = form.Topic.data
-
+    form = RegisterForm(request.form)
+    if request.method == "POST" and form.validate():
+        question = form.Question.data
+        answer = form.Answer.data
+        topic = form.Topic.data
         #if check_for_topic(topic) == False:
             # execute query
-            #d.add_question(question, answer, topic)
-            #flash("Question has been successfully added")
-            #redirect(url_for("home"))
+        d.add_question(question, answer, topic)
+        flash("Question has been successfully added")
+        return redirect(url_for("home"))
         #else:
             #flash("That is not a valid Topic")
             #return render_template("makequestions.html", form=form)
-
-        #return redirect(url_for("home"))
-    return render_template("makequestions.html")
+    return render_template("makequestions.html",form=form)
 
 #List of posts
 @app.route("/teacherposts")
@@ -115,6 +114,10 @@ def quizzes():
 @app.route("/Quizzes/<string:quizid>/")
 def quiz(quizid):
     return render_template("Quiz.html", quizid = quizid)
+
+@app.route("/Quzzes/<string:quizid>/<string:qid>")
+def questions(qid):
+    return render_template("question.html")
 
 #Register Class
 class RegisterForm(Form):
@@ -156,7 +159,26 @@ def login():
         #Get form fields
         email = request.form["email"]
         password_candidate = request.form["password"]
-        d.login(email, password_candidate)
+
+        user_data = d.get_login(email, password_candidate)
+
+        if user_data is not None:
+
+            password = user_data[4]
+
+            if sha256_crypt.verify(password_candidate, password):
+                flash("You are now logged in.")
+                session["logged_in"] = True
+                session["ID"] = d.get_id(email)
+                return redirect(url_for("home"))
+            else:
+                flash("Invalid login")
+                return render_template("login.html")
+
+        else:
+            flash("Email not found")
+            return render_template("login.html")
+
     return render_template("login.html")
 
 @app.route("/logout")

@@ -1,0 +1,3 @@
+<!--{% if d.get_current_user_role(session.ID) == "admin" %}
+                <li><a href="/makequestions">Make Questions</a></li>
+              {% endif %}-->
